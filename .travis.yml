@@ -19,7 +19,6 @@ install:
   - pip install ammorph-*.whl
 
 script:
-  - cd
-  - cd AMmorph
+  - cd $TRAVIS_BUILD_DIR
   - pytest
 
