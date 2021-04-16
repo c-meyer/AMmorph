@@ -1,0 +1,22 @@
+dist: xenial
+
+language: python
+
+cache: pip
+
+python:
+  - "3.6"
+  - "3.7"
+  - "3.8"
+
+before_install:
+  - pip install pytest
+
+install:
+  - python setup.py sdist
+  - cd dist
+  - pip wheel --no-deps ammorph-*.tar.gz
+  - pip install ammorph-*.whl
+
+script:
+  - pytest
