@@ -102,13 +102,14 @@ def assemble(rbffunc, points, polynomial_order=None, out=None):
     local_dict = {'r': out}
     ne.evaluate(rbffunc, local_dict)
     out[no_of_points:, no_of_points:] = 0.0
-    if polynomial_order >= 0:
-        out[no_of_points, :no_of_points] = 1.0
-        out[:no_of_points, no_of_points] = 1.0
-    if polynomial_order >= 1:
-        out[no_of_points+1:no_of_points+1+spatial_dimension,:no_of_points] =\
-            points.T
-        out[:no_of_points, no_of_points+1:no_of_points+1+spatial_dimension] =\
-            points
+    if polynomial_order is not None:
+        if polynomial_order >= 0:
+            out[no_of_points, :no_of_points] = 1.0
+            out[:no_of_points, no_of_points] = 1.0
+        if polynomial_order >= 1:
+            out[no_of_points+1:no_of_points+1+spatial_dimension,:no_of_points] =\
+                points.T
+            out[:no_of_points, no_of_points+1:no_of_points+1+spatial_dimension] =\
+                points
 
     return out
