@@ -20,7 +20,8 @@ install:
 
 script:
   - pwd
-  - ls /home/travis/build/AMmorph
-  - ls /home/travis/build/AMmorph/tests
+  - ls /home/travis/build/c-meyer/AMmorph
+  - ls /home/travis/build/c-meyer/AMmorph/tests
+  - cd /home/travis/build/c-meyer/AMmorph
   - pytest tests/test_assembly.py
 
