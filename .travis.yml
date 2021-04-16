@@ -19,9 +19,7 @@ install:
   - pip install ammorph-*.whl
 
 script:
-  - pwd
-  - ls /home/travis/build/c-meyer/AMmorph
-  - ls /home/travis/build/c-meyer/AMmorph/tests
-  - cd /home/travis/build/c-meyer/AMmorph
-  - pytest tests/test_assembly.py
+  - cd
+  - cd AMmorph
+  - pytest
 
