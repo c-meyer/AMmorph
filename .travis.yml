@@ -19,5 +19,8 @@ install:
   - pip install ammorph-*.whl
 
 script:
+  - pwd
+  - ls /home/travis/build/AMmorph
+  - ls /home/travis/build/AMmorph/tests
   - pytest tests/test_assembly.py
 
