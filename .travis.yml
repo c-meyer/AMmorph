@@ -19,4 +19,5 @@ install:
   - pip install ammorph-*.whl
 
 script:
-  - pytest
+  - pytest tests/test_assembly.py
+
