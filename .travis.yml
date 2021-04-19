@@ -9,29 +9,17 @@ python:
   - "3.7"
   - "3.8"
 
-stages:
-  - build
-  - test
+before_install:
+  - pip install pytest
 
-jobs:
-  include:
-    - stage: build
-      name: "Build AMmorph Wheel from source dist"
-      before_install:
-        - pip install pytest
-      script:
-        - python setup.py sdist
-        - cd dist
-        - pip wheel --no-deps ammorph-*.tar.gz
-        - pip install ammorph-*.whl
+install:
+  - python setup.py sdist
+  - cd dist
+  - pip wheel --no-deps ammorph-*.tar.gz
+  - pip install ammorph-*.whl
 
-    - stage: test
-      name: "Test Installation"
-      before_install:
-        - pip install pytest
-      install:
-        - cd dist
-        - pip install ammorph-*.whl
-      script:
-        - cd $TRAVIS_BUILD_DIR
-        - pytest
+script:
+  - cd $TRAVIS_BUILD_DIR
+  - pytest
+  - cd docs
+  - make html
