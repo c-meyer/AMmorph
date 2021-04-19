@@ -21,4 +21,5 @@ install:
 script:
   - cd $TRAVIS_BUILD_DIR
   - pytest
-
+  - cd docs
+  - make html
