@@ -16,10 +16,9 @@ import numexpr as ne
 
 
 def assemble(rbffunc, points, polynomial_order=None, out=None):
-    r"""
-    assemble(rbffunc, points, polynomial_order, out)
+    r"""Assemble the M matrix for computing the RBF weights.
 
-    assembles the matrix
+    Assembles the matrix
 
     .. math::
         M = \begin{bmatrix}
@@ -60,23 +59,23 @@ def assemble(rbffunc, points, polynomial_order=None, out=None):
     ----------
     rbffunc : str
         String that defines the rbf function :math:`\phi(r)` used for assembly.
-        The function string must contain the character 'r' as argument
+        The function string must contain the character 'r' as argument.
     points : array_like
         point coordinates of the handle points :math:`h_i` for assembly.
         points is an array of dimension :math:`N_H \times d` where :math:`N_H`
-        is the number of handle points and :math:`d` is the spatial dimension
+        is the number of handle points and :math:`d` is the spatial dimension.
     polynomial_order : int, optional
         The interpolation problem is augmented by polynomial terms of order
         polynomial_order. Currently only up to order 1 is supported.
         If None, no polynomial terms are added.
-        If zero, only the term '1' is added
+        If zero, only the term '1' is added.
     out : array_like, optional
         Array to write the matrix :math:`M` into.
 
     Returns
     -------
     matrix : array_like
-        Assembled matrix
+        Assembled matrix.
     """
     spatial_dimension = points.shape[1]
     no_of_points = points.shape[0]
@@ -97,10 +96,14 @@ def assemble(rbffunc, points, polynomial_order=None, out=None):
 
     if polynomial_order is None:
         cdist(points, points, out=out[:no_of_points, :no_of_points])
+        local_dict = {'r': out}
+        ne.evaluate(rbffunc, local_dict, out=out[:no_of_points, :no_of_points])
     else:
         out[:no_of_points, :no_of_points] = cdist(points, points)
-    local_dict = {'r': out}
-    ne.evaluate(rbffunc, local_dict)
+        local_dict = {'r': out[:no_of_points, :no_of_points]}
+        out[:no_of_points, :no_of_points] = ne.evaluate(rbffunc, local_dict)
+
+
     out[no_of_points:, no_of_points:] = 0.0
     if polynomial_order is not None:
         if polynomial_order >= 0:
