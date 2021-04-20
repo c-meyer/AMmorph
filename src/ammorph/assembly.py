@@ -12,6 +12,7 @@
 #
 import numpy as np
 from scipy.spatial.distance import cdist
+from scipy.sparse import csr_matrix, dok_matrix
 import numexpr as ne
 
 
@@ -114,5 +115,105 @@ def assemble(rbffunc, points, polynomial_order=None, out=None):
                 points.T
             out[:no_of_points, no_of_points+1:no_of_points+1+spatial_dimension] =\
                 points
+
+    return out
+
+
+def sparse_assemble(rbffunc, points, polynomial_order=None):
+    r"""Assemble the M matrix for computing the RBF weights as sparse matrix.
+
+    Compares to the assemble routine, this is a sparse assembly and used with
+    Radial Basis Functions with compact support.
+
+    Assembles the matrix
+
+    .. math::
+        M = \begin{bmatrix}
+            A & P^T \\
+            P & 0
+        \end{bmatrix}
+
+    with
+
+    .. math::
+        A = \begin{bmatrix}
+            \phi(h_1 - h_1) & \phi(h_1 - h_2) & \ldots & \phi(h_1 - h_N) \\
+            \phi(h_2 - h_1) & \phi(h_2 - h_2) & \ldots & \phi(h_2 - h_N) \\
+            & \vdots & & \\
+            \phi(h_N - h_1) & \phi(h_N - h_2) & \ldots & \phi(h_N - h_N) \\
+        \end{bmatrix}
+
+    and
+
+    .. math::
+        P = \begin{bmatrix} 1 & 1 & \ldots & 1 \\
+            x_1 & x_2 & \ldots & x_N \\
+            y_1 & y_2 & \ldots & y_N \\
+            z_1 & z_2 & \ldots & z_N \\
+            x_1^2 & x_2^2 & \ldots & x_N^2
+            & \ldots & &
+            \end{bmatrix}
+
+    :math:`P` contains monomials up to order of argument function argument
+    polynomial_order. If polynomial_order is None, :math:`A` is not augmented
+    by any :math:`P`
+    matrix. The augmentation with :math:`P` is useful for radial basis
+    functions that would lead to a singular matrix :math:`A`.
+    The augmentation makes :math:`M` positive definite for these functions.
+
+
+    Parameters
+    ----------
+    rbffunc : str
+        String that defines the rbf function :math:`\phi(r)` used for assembly.
+        The function string must contain the character 'r' as argument.
+    points : array_like
+        point coordinates of the handle points :math:`h_i` for assembly.
+        points is an array of dimension :math:`N_H \times d` where :math:`N_H`
+        is the number of handle points and :math:`d` is the spatial dimension.
+    polynomial_order : int, optional
+        The interpolation problem is augmented by polynomial terms of order
+        polynomial_order. Currently only up to order 1 is supported.
+        If None, no polynomial terms are added.
+        If zero, only the term '1' is added.
+
+    Returns
+    -------
+    matrix : csr_matrix
+        Assembled matrix.
+    """
+    spatial_dimension = points.shape[1]
+    no_of_points = points.shape[0]
+
+    if polynomial_order is None:
+        extra_columns = 0
+    elif polynomial_order == 0:
+        extra_columns = 1
+    elif polynomial_order == 1:
+        extra_columns = spatial_dimension + 1
+    else:
+        raise NotImplementedError('Currently only augmentation until'
+                                  'polynomial order = 1 is supported')
+
+    matrix_dimension = no_of_points + extra_columns
+    matrix = dok_matrix((matrix_dimension, matrix_dimension), dtype=np.float64)
+
+    for i in range(no_of_points):
+        for j in range(i):
+            r = np.linalg.norm(points[i, :] - points[j, :])
+            val = ne.evaluate(rbffunc, {'r': r})
+            if val != 0.0:
+                matrix[i, j] = val
+                matrix[j, i] = val
+
+    if polynomial_order is not None:
+        if polynomial_order >= 0:
+            matrix[no_of_points, :no_of_points] = 1.0
+            matrix[:no_of_points, no_of_points] = 1.0
+        if polynomial_order >= 1:
+            matrix[no_of_points+1:no_of_points+1+spatial_dimension, :no_of_points] = points.T
+            matrix[:no_of_points, no_of_points+1:no_of_points+1+spatial_dimension] = points
+
+    out = matrix.tocsr()
 
     return out
