@@ -70,8 +70,10 @@ def evaluate(rbffunc, points, centers, gamma, beta=None, polynomial_order=None,
     cdist(points, centers, out=distances)
     local_dict = {'r': distances}
     ne.evaluate(rbffunc, local_dict, out=distances)
-    distances.dot(gamma, out=out)
-
+    try:
+        distances.dot(gamma, out=out)
+    except ValueError:
+        out = distances.dot(gamma)
     if polynomial_order is not None:
         if polynomial_order >= 0:
             out += beta[0]
