@@ -1,6 +1,6 @@
 # AMmorph
 
-![Travis (.com)](https://img.shields.io/travis/com/c-meyer/AMmorph)
+[![Build Status](https://travis-ci.com/AppliedMechanics/AMmorph.svg?branch=master)](https://travis-ci.com/AppliedMechanics/AMmorph)
 
 This software contains algorithms to morph parametric Finite Element meshes
 via Radial Basis Functions (RBF).
