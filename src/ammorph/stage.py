@@ -11,7 +11,6 @@
 import logging
 import numpy as np
 from scipy.linalg import solve
-import sympy
 from sympy import lambdify
 
 from ammorph.assembly import assemble
@@ -29,22 +28,23 @@ class CompositeStage:
     Instead each substage uses the deformation at the beginning
     of the stage.
     """
+
     def __init__(self, callback=None, callbackargs=(), name=None):
         """
         Parameters
         ----------
         callback : function, optional
-            Callback function with signature callback(x, d, delta_d, \*args)
+            Callback function with signature callback(x, d, delta_d, *args)
             This function is called after the stage has been finished.
             x are the reference coordinates
             d is the displacement vector at beginning of the stage
             delta_d is the difference to the displacement vector after
             processing the stage.
         callbackargs : tuple, optional
-            arguments that are passed as \*args in the callback function
+            arguments that are passed as *args in the callback function
         name : str, optional
             A name can be passed that is used in logging features to identify
-            the stage that produces certain loggin messages.
+            the stage that produces certain logging messages.
 
         """
         self._callback = callback
@@ -116,18 +116,17 @@ class CompositeStage:
 
         logging.info('This is stage {}'.format(self._name))
         no_of_stages = len(self._stages)
-        logging.info('-'*80 +
+        logging.info('-' * 80 +
                      '\nRun {} substages ...\n'.format(no_of_stages))
         for i, (stage, partitioned) in enumerate(self._stages):
-
-            logging.info('-'*80 +
-                         '\nRunning Substage {} of {} ...\n'.format(i+1,
-                                                                 no_of_stages))
+            logging.info('-' * 80 +
+                         '\nRunning Substage {} of {} ...\n'.format(i + 1,
+                                                                    no_of_stages))
 
             stage.morph(p_args, p_vals, x0, d0, delta_d, partition)
         if self._callback is not None:
             self._callback(x0, d0, delta_d, *self._callbackargs)
-        logging.info('Finished {} substages.\n'.format(no_of_stages) +'-'*80 +
+        logging.info('Finished {} substages.\n'.format(no_of_stages) + '-' * 80 +
                      '\n')
 
 
@@ -138,6 +137,7 @@ class Stage:
     A Stage can be seen as a deformation step. A full mesh morphing study
     consists of several stages that are applied in seqence to the mesh.
     """
+
     def __init__(self, active_nodes, fixed_nodes, rbf_func,
                  polynomial_order=None,
                  callback=None, callbackargs=(), name=None):
@@ -208,7 +208,7 @@ class Stage:
         for i, (handler, parameters) in enumerate(self._deformation_handlers):
             logging.info('Call Deformation '
                          'Handler {} '
-                         'of {} ...'.format(i+1, no_of_deformation_handlers))
+                         'of {} ...'.format(i + 1, no_of_deformation_handlers))
             p = lambdify([p_arg for p_arg in p_args],
                          [pm for pm in parameters])
             handler.deform(p(*p_vals), x0, d0, delta_d_handler)
@@ -247,12 +247,12 @@ class Stage:
 
     def _morph_partitioned(self, p_args, p_vals, x0, d0, delta_d, partition,
                            no_of_partitions):
-        delta_d_handler= np.copy(delta_d)
+        delta_d_handler = np.copy(delta_d)
         self._morph_part1(p_args, p_vals, x0, d0, delta_d_handler)
 
         for i in range(no_of_partitions):
             logging.info('--- Morph partition {} of {}'.format(
-                i+1, no_of_partitions))
+                i + 1, no_of_partitions))
             active_nodes = self._get_partitioned_nodes(self._active_nodes,
                                                        partition, i)
             fixed_and_handle_nodes = self._get_partitioned_nodes(
@@ -265,7 +265,7 @@ class Stage:
         del delta_d_handler
 
     def _morph_unpartitioned(self, p_args, p_vals, x0, d0, delta_d):
-        delta_d_handler= np.copy(delta_d)
+        delta_d_handler = np.copy(delta_d)
         self._morph_part1(p_args, p_vals, x0, d0, delta_d_handler)
 
         active_nodes = self._active_nodes
@@ -273,9 +273,9 @@ class Stage:
         no_of_fixed_and_handle_nodes = len(fixed_and_handle_nodes)
 
         self._assemble_and_evaluate(x0, d0, active_nodes,
-                                   fixed_and_handle_nodes,
-                                   no_of_fixed_and_handle_nodes,
-                                   delta_d_handler, delta_d)
+                                    fixed_and_handle_nodes,
+                                    no_of_fixed_and_handle_nodes,
+                                    delta_d_handler, delta_d)
         del delta_d_handler
 
     def add_deformation_handler(self, handler, parameters):
