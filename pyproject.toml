@@ -1,3 +1,27 @@
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = 'ammorph'
+version = '0.0.2'
+description = 'This project deals with Radial Basis Function Mesh Morphing Techniques for Design Optimization in Finite Element Simulations '
+readme = 'README.md'
+requires-python = '>=3.8'
+license = {file = 'LICENSE'}
+authors = [
+    { name = 'Christian Meyer', email = 'christian.meyer@tum.de' },
+]
+maintainers = [
+  { name = "Christian Meyer", email = "christian.meyer@tum.de"}
+]
+dependencies = [
+    "scipy >=1.1.0",
+    "sphinx",
+    "sphinx_rtd_theme",
+    "numpydoc",
+    "numpy",
+    "sympy",
+    "numexpr",
+    "matplotlib"
+    ]
