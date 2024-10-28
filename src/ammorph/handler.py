@@ -15,6 +15,7 @@ from sympy.vector import CoordSys3D
 __all__ = ['ShiftDeformationHandler',
            'RotationDeformationHandler',
            'VectorDeformationHandler',
+           'StretchDeformationHandler',
            ]
 
 class DeformationHandler(ABC):
@@ -304,3 +305,99 @@ class VectorDeformationHandler(DeformationHandler):
         delta_d[self._handle_nodes, 0] = delta_d[self._handle_nodes, 0] + self._deformation[:, 0]
         delta_d[self._handle_nodes, 1] = delta_d[self._handle_nodes, 1] + self._deformation[:, 1]
         delta_d[self._handle_nodes, 2] = delta_d[self._handle_nodes, 2] + self._deformation[:, 2]
+
+
+class StretchDeformationHandler(DeformationHandler):
+    """
+    StretchDeformationHandler.
+
+    Stretches elements linearly to their distance in z direction to a reference sympy coordinate system.
+
+    Examples
+    --------
+
+    >>> handle_nodes = np.array([0, 1, 2], dtype=np.int32)
+    >>> x0 = np.random.rand(9).reshape(3,3)
+    >>> d0 = np.zeros_like(x0)
+    >>> delta_d = np.zeros_like(x0)
+    >>> # Get initial coordinate system
+    >>> csys_ref = study.csys
+    >>> # Rotate 90 degree around initial x axis:
+    >>> csys_new = csys_ref.orient_new_axis('B', sympy.pi/2.0, csys_ref.i)
+    >>> # Create deformation handler
+    >>> dh = StretchDeformationHandler(handle_nodes, csys_ref, csys_new)
+    >>> # Apply a stretch of amplitude 2.0
+    >>> dh.deform(np.array([2.0]), x0, d0, delta_d)
+
+    """
+    def __init__(self, handle_nodes, csys_ref, csys, mode='factor'):
+        """
+        Parameters
+        ----------
+        handle_nodes : array_like
+            array of dtype int32 containing the indices of the handle nodes
+            that are to be set by the deformation handler
+        csys_ref : CoordSys3D
+            sympy coordinate system describing a reference system.
+            Usually you pass study.csys as this argument.
+        csys : CoordSys3D
+            sympy coordinate system that is related to csys_ref.
+            The z-axis of this system should point into the direction of the
+            desired shift deformation.
+        mode: {'factor', 'maximum'}
+            if mode = factor (default): the parameter is a stretch factor.
+            if mode = maximum: the parameter is a maximum delta for the node with the highest distance to csys.
+        """
+        super().__init__(handle_nodes)
+        if mode in ['stretch', 'max_delta']:
+            self._mode = mode
+        else:
+            raise ValueError('mode must be either "factor" or "max_delta"')
+        self._csys0 = csys_ref
+        self._csys = csys
+
+    def deform(self, parameters, x0, d0, delta_d):
+        """
+        Writes displacements into delta_d describing the deformation.
+
+        Parameters
+        ----------
+        parameters : array_like
+            Array dtype float containing the parameter values of the desired
+            deformation. This handler expects just one parameter at
+            parameters[0]. This parameter is the amplitude of the displacement.
+        x0 : array_like
+            Array dtype float containing the node coordinates of all nodes
+            in reference configuration.
+        d0 : array_like
+            Array dtype float containing the nodal displacement at the
+            beginning of the deformation
+        delta_d : array_like
+            Array to write the result into. The result is added to
+            delta_d. Thus, you need to zero this array before you call this
+            method, if you want the effect of the DeformationHandler
+            only.
+
+        Returns
+        -------
+
+        """
+        # 1. Compute the distance to reference:
+        coords = np.array(self._csys.origin.express_coordinates(self._csys0)).astype(float)
+        delta_x = x0 - coords
+        zvec = self._csys0.origin.locate_new('zvec', 1 * self._csys.k)
+        zvec_0 = np.array(zvec.express_coordinates(self._csys0)).astype(float)
+        projected_distance = delta_x.dot(zvec_0)
+        if self._mode == 'factor':
+            shift_amplitude = parameters[0]*projected_distance
+        elif self._mode == 'max_delta':
+            max_distance_reference = np.max(projected_distance[self._handle_nodes])
+            factor = (max_distance_reference + parameters[0]) / max_distance_reference - 1.0
+            shift_amplitude = factor*projected_distance
+        else:
+            raise AssertionError('mode is {}, but must be factor or maximum'.format(self._mode))
+        shift = np.outer(shift_amplitude, zvec_0)
+
+        delta_d[self._handle_nodes, 0] = delta_d[self._handle_nodes, 0] + shift[self._handle_nodes, 0]
+        delta_d[self._handle_nodes, 1] = delta_d[self._handle_nodes, 1] + shift[self._handle_nodes, 1]
+        delta_d[self._handle_nodes, 2] = delta_d[self._handle_nodes, 2] + shift[self._handle_nodes, 2]
