@@ -16,6 +16,7 @@ __all__ = ['ShiftDeformationHandler',
            'RotationDeformationHandler',
            'VectorDeformationHandler',
            'StretchDeformationHandler',
+           'RadialStretchDeformationHandler'
            ]
 
 class DeformationHandler(ABC):
@@ -401,3 +402,104 @@ class StretchDeformationHandler(DeformationHandler):
         delta_d[self._handle_nodes, 0] = delta_d[self._handle_nodes, 0] + shift[self._handle_nodes, 0]
         delta_d[self._handle_nodes, 1] = delta_d[self._handle_nodes, 1] + shift[self._handle_nodes, 1]
         delta_d[self._handle_nodes, 2] = delta_d[self._handle_nodes, 2] + shift[self._handle_nodes, 2]
+
+
+class RadialStretchDeformationHandler(DeformationHandler):
+    """
+    RadialStretchDeformationHandler.
+
+    Adds a parametric stretch into radial direction in the x-y-plane of a given sympy coordinate
+    system.
+
+    Examples
+    --------
+
+    >>> handle_nodes = np.array([0, 1, 2], dtype=np.int32)
+    >>> x0 = np.random.rand(9).reshape(3,3)
+    >>> d0 = np.zeros_like(x0)
+    >>> delta_d = np.zeros_like(x0)
+    >>> # Get initial coordinate system
+    >>> csys_ref = study.csys
+    >>> # Rotate 90 degree around initial x axis:
+    >>> csys_new = csys_ref.locate_new('CenterPoint', 3*csys_ref.i + 4*csys_ref.j + 5*csys_ref.k)
+    >>> # Create deformation handler
+    >>> dh = RadialStretchDeformationHandler(handle_nodes, csys_ref, csys_new)
+    >>> # Apply radial stretch of amplitude 2.0
+    >>> dh.deform(np.array([2.0]), x0, d0, delta_d)
+
+    """
+    def __init__(self, handle_nodes, csys_ref, csys):
+        """
+        Parameters
+        ----------
+        handle_nodes : array_like
+            array of dtype int32 containing the indices of the handle nodes
+            that are to be set by the deformation handler
+        csys_ref : CoordSys3D
+            sympy coordinate system describing a reference system.
+            Usually you pass study.csys as this argument.
+        csys : CoordSys3D
+            sympy coordinate system that is related to csys_ref.
+            The z-axis of this system should point into the direction of the
+            desired shift deformation.
+        """
+        super().__init__(handle_nodes)
+        self._csys0 = csys_ref
+        self._csys = csys
+
+    def deform(self, parameters, x0, d0, delta_d):
+        """
+        Writes displacements into delta_d describing the deformation.
+
+        Parameters
+        ----------
+        parameters : array_like
+            Array dtype float containing the parameter values of the desired
+            deformation. This handler expects just one parameter at
+            parameters[0]. This parameter is the amplitude of the displacement.
+        x0 : array_like
+            Array dtype float containing the node coordinates of all nodes
+            in reference configuration.
+        d0 : array_like
+            Array dtype float containing the nodal displacement at the
+            beginning of the deformation
+        delta_d : array_like
+            Array to write the result into. The result is added to
+            delta_d. Thus, you need to zero this array before you call this
+            method, if you want the effect of the DeformationHandler
+            only.
+
+        Returns
+        -------
+
+        """
+        center_coords = np.array(self._csys.origin.express_coordinates(self._csys0)).astype(float)
+        sb_x = self._csys0.origin.locate_new('e_x', 1 * self._csys.i)
+        sb_y = self._csys0.origin.locate_new('e_y', 1 * self._csys.j)
+        sb_z = self._csys0.origin.locate_new('e_z', 1 * self._csys.k)
+        b_x = np.array(sb_x.express_coordinates(self._csys0)).astype(float)
+        b_y = np.array(sb_y.express_coordinates(self._csys0)).astype(float)
+
+        e_x = np.array([1.0, 0.0, 0.0])
+        e_y = np.array([0.0, 1.0, 0.0])
+        e_z = np.array([0.0, 0.0, 1.0])
+
+        x0_c = x0[self._handle_nodes, :] - center_coords
+        x0_c_x = x0_c.dot(b_x)
+        x0_c_y = x0_c.dot(b_y)
+        r0_c = np.outer(x0_c_x, b_x) + np.outer(x0_c_y, b_y)
+        r0_c_abs = np.sqrt(x0_c_x ** 2 + x0_c_y ** 2)
+        e_r = r0_c / r0_c_abs.reshape(-1, 1)
+        # mask numerically difficult radii
+        tol = 1.e-14
+        e_r[r0_c_abs < tol, :] = 0.0
+
+        delta_r = (parameters[0] * r0_c_abs - r0_c_abs)
+
+        delta_x = delta_r * e_r.dot(e_x)
+        delta_y = delta_r * e_r.dot(e_y)
+        delta_z = delta_r * e_r.dot(e_z)
+
+        delta_d[self._handle_nodes, 0] = delta_d[self._handle_nodes, 0] + delta_x
+        delta_d[self._handle_nodes, 1] = delta_d[self._handle_nodes, 1] + delta_y
+        delta_d[self._handle_nodes, 2] = delta_d[self._handle_nodes, 2] + delta_z
